@@ -11,7 +11,7 @@ codebase they're in.
 
 ## Status
 
-**Agent fleet populated (v0.1.0).** The 11 general dev agents are present and
+**Agent fleet populated (v0.2.0).** The 15 general dev agents are present and
 genericized — they carry zero app-specific or vault-specific strings and
 register as `forge:<name>`:
 
@@ -19,6 +19,14 @@ register as `forge:<name>`:
 - `code-reviewer`, `security-auditor`
 - `doc-finder`, `test-runner`, `log-sifter`, `pr-summarizer`
 - `sdd-assumption-prover`, `sdd-implementer`
+- `council-builder`, `council-reliability`, `council-security`, `council-advocate`
+
+The four **council review-lens agents** (`council-*`) are dispatched as a
+parallel quartet by a planning skill's council-lite review step — not
+standalone. Each holds a single perspective (Builder=architecture,
+Reliability=tests/failure modes, Security=threat model, Advocate=UX) and
+returns a focused single-lens response rather than a synthesis. If you need
+general architecture advice outside a planning context, use `architect` instead.
 
 A proof-of-life agent (`forge-ping`) also ships to confirm plugin agent
 registration works. Two agents are intentionally **not** here: `planner` moves

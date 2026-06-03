@@ -164,6 +164,10 @@ _VISIBLE_SKIP_AGENTS: list[str] = [
     "architect",
     "troubleshooter",
     "researcher",
+    "council-builder",
+    "council-reliability",
+    "council-security",
+    "council-advocate",
 ]
 
 
