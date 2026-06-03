@@ -26,12 +26,13 @@ INVARIANT: none of the joined results appears verbatim as a contiguous string
 in this source outside of the join-list expressions. The self-check below
 enforces this at collection time.
 
-The five tokens constructed at runtime (see MIDDLE_BAND_TOKENS):
+The tokens constructed at runtime (see MIDDLE_BAND_TOKENS):
   - app character name (5 chars, starts with P)
   - transit system name (5 chars, starts with M)
   - hyphenated environment term (7 chars)
   - Elixir build/test CLI tool (3 chars)
   - Node build/test CLI tool (3 chars)
+  - internal mobile repo/subsystem slug (hyphenated, 15 chars)
 
 Identifying tokens (org name / bot name / infra vendor / developer handle /
 schema name) are NOT checked here — those are the leak gate's exclusive
@@ -77,6 +78,7 @@ MIDDLE_BAND_TOKENS: list[str] = [
     "".join(["d", "e", "v", "-", "e", "n", "v"]), # hyphenated env term
     "".join(["m", "i", "x"]),                      # Elixir build tool
     "".join(["n", "p", "m"]),                      # Node build tool
+    "".join(["m", "o", "b", "i", "l", "e", "-", "o", "v", "e", "r", "v", "i", "e", "w"]),  # internal mobile repo slug
 ]
 
 # ---------------------------------------------------------------------------
