@@ -75,10 +75,13 @@ exit `2` (error) — it never exits `0` when it could not actually certify the
 tree clean. The denylist format is one Python regex per line (`#` comments),
 matched case-insensitively; use `\b` word-boundary anchors.
 
-Install as a pre-commit hook (scan the shippable surface, not `tests/`/docs):
+Install as a pre-commit hook. Pass every tree that ships publicly — the
+shippable surface **and** `tests/` (test fixtures go public too) — but not
+author-controlled root docs, which may legitimately carry the public repo-owner
+URL:
 
 ```bash
-plugins/forge/scripts/install-hooks.sh <repo> plugins/<name>
+plugins/forge/scripts/install-hooks.sh <repo> plugins/<name> tests
 ```
 
 The installer is idempotent and chain-safe — an existing pre-commit hook is

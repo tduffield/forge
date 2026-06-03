@@ -23,8 +23,9 @@ REPO_ROOT = Path(__file__).parent.parent
 GATE = REPO_ROOT / "plugins" / "forge" / "scripts" / "leak_gate.py"
 
 
-def _run(tree: Path, denylist: Path | None) -> subprocess.CompletedProcess:
-    cmd = [sys.executable, str(GATE), str(tree)]
+def _run(tree, denylist: Path | None) -> subprocess.CompletedProcess:
+    trees = tree if isinstance(tree, (list, tuple)) else [tree]
+    cmd = [sys.executable, str(GATE), *[str(t) for t in trees]]
     if denylist is not None:
         cmd += ["--denylist", str(denylist)]
     return subprocess.run(cmd, capture_output=True, text=True)
@@ -111,6 +112,33 @@ def test_binary_and_pycache_skipped(tmp_path: Path, denylist: Path):
     (tree / "blob.bin").write_bytes(b"\x00\x01sekritcorp\x02")
     r = _run(tree, denylist)
     assert r.returncode == 0, r.stdout
+
+
+# ---- multiple trees ---------------------------------------------------------
+
+def test_multiple_trees_all_scanned(tmp_path: Path, denylist: Path):
+    a = tmp_path / "a"; a.mkdir()
+    b = tmp_path / "b"; b.mkdir()
+    _write(a, "ok.md", "clean prose\n")
+    _write(b, "bad.md", "uses sekritcorp here\n")
+    r = _run([a, b], denylist)
+    assert r.returncode == 1, r.stderr
+    assert "bad.md" in r.stdout
+
+
+def test_multiple_trees_all_clean_exits_0(tmp_path: Path, denylist: Path):
+    a = tmp_path / "a"; a.mkdir()
+    b = tmp_path / "b"; b.mkdir()
+    _write(a, "ok.md", "clean\n")
+    _write(b, "fine.md", "also clean\n")
+    assert _run([a, b], denylist).returncode == 0
+
+
+def test_multiple_trees_one_missing_fails_closed(tmp_path: Path, denylist: Path):
+    a = tmp_path / "a"; a.mkdir()
+    _write(a, "ok.md", "clean\n")
+    r = _run([a, tmp_path / "missing"], denylist)
+    assert r.returncode == 2
 
 
 # ---- fail-closed ------------------------------------------------------------

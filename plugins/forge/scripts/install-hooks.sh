@@ -2,12 +2,14 @@
 # install-hooks.sh — idempotently install the forge leak-gate as a pre-commit
 # hook in a target repo's .git/hooks/pre-commit.
 #
-# Usage: install-hooks.sh <repo-path> [<scan-subdir>]
+# Usage: install-hooks.sh <repo-path> [<scan-subdir> ...]
 #   <repo-path>    git repo whose commits should be gated.
-#   <scan-subdir>  dir under the repo to scan (default: ".", the whole repo).
-#                  For plugin repos, pass the shippable surface, e.g.
-#                  "plugins/lore" or "plugins/forge" — tests/ and dev docs may
-#                  legitimately reference the developer's machine path.
+#   <scan-subdir>  one or more dirs under the repo to scan (default: ".", the
+#                  whole repo). For plugin repos, pass the shippable surface AND
+#                  the test tree — both go public — e.g.
+#                  "plugins/lore tests". Author-controlled root docs (README,
+#                  ROADMAP) are left unscanned since they may legitimately carry
+#                  the public repo-owner URL.
 #
 # The denylist is machine-local: $LEAK_GATE_DENYLIST or ~/.claude/leak-gate.denylist.
 # If it is missing at commit time the gate fails closed (blocks the commit).
@@ -22,11 +24,13 @@
 set -euo pipefail
 
 REPO="${1:-}"
-SCAN_SUBDIR="${2:-.}"
 if [ -z "$REPO" ]; then
-    echo "usage: install-hooks.sh <repo-path> [<scan-subdir>]" >&2
+    echo "usage: install-hooks.sh <repo-path> [<scan-subdir> ...]" >&2
     exit 1
 fi
+shift
+SCAN_SUBDIRS=("$@")
+[ ${#SCAN_SUBDIRS[@]} -eq 0 ] && SCAN_SUBDIRS=(".")
 
 REPO="$(cd "$REPO" && pwd)"
 GIT_HOOKS_DIR="$REPO/.git/hooks"
@@ -46,7 +50,14 @@ if [ ! -f "$GATE" ]; then
 fi
 
 DENYLIST="${LEAK_GATE_DENYLIST:-$HOME/.claude/leak-gate.denylist}"
-SCAN_TARGET="$REPO/$SCAN_SUBDIR"
+
+# Build a quoted, space-separated list of absolute scan targets for the hook.
+SCAN_TARGETS_QUOTED=""
+SCAN_TARGETS_DISPLAY=""
+for sd in "${SCAN_SUBDIRS[@]}"; do
+    SCAN_TARGETS_QUOTED+=" \"$REPO/$sd\""
+    SCAN_TARGETS_DISPLAY+=" $REPO/$sd"
+done
 
 MARKER="# forge-leak-gate-installed"
 
@@ -72,7 +83,7 @@ set -euo pipefail
 
 "$ORIGINAL_HOOK" "\$@" || exit \$?
 
-exec python3 "$GATE" "$SCAN_TARGET" --denylist "$DENYLIST"
+exec python3 "$GATE"$SCAN_TARGETS_QUOTED --denylist "$DENYLIST"
 EOF
 else
     cat > "$TARGET" <<EOF
@@ -84,11 +95,11 @@ $MARKER
 
 set -euo pipefail
 
-exec python3 "$GATE" "$SCAN_TARGET" --denylist "$DENYLIST"
+exec python3 "$GATE"$SCAN_TARGETS_QUOTED --denylist "$DENYLIST"
 EOF
 fi
 
 chmod +x "$TARGET"
 echo "Installed forge leak gate at $TARGET"
-echo "  scanning: $SCAN_TARGET"
+echo "  scanning:$SCAN_TARGETS_DISPLAY"
 echo "  denylist: $DENYLIST"

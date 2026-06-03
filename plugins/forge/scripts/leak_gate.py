@@ -9,7 +9,11 @@ repo. That keeps the publishable plugin repos (forge, lore) free of the very
 tokens they must not leak.
 
 Usage:
-    leak_gate.py <tree-path> [--denylist <path>]
+    leak_gate.py <tree-path> [<tree-path> ...] [--denylist <path>]
+
+Multiple trees may be scanned in one invocation (e.g. a plugin's shippable
+surface AND its tests/ dir — both go public, but tests/ often sits outside a
+single shippable-surface path). A missing path among them fails closed.
 
 Denylist format:
     One Python regex per line. `#` starts a comment; blank lines ignored.
@@ -103,7 +107,7 @@ def scan(tree: Path, patterns: list[re.Pattern]) -> list[tuple[Path, int, str]]:
 
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description="Denylist-driven leak gate.")
-    ap.add_argument("tree", help="directory to scan")
+    ap.add_argument("trees", nargs="+", metavar="tree", help="one or more directories to scan")
     ap.add_argument(
         "--denylist",
         default=os.environ.get("LEAK_GATE_DENYLIST", str(DEFAULT_DENYLIST)),
@@ -111,10 +115,11 @@ def main(argv: list[str]) -> int:
     )
     args = ap.parse_args(argv)
 
-    tree = Path(args.tree)
-    if not tree.exists():
-        _err(f"tree path does not exist: {tree}")
-        return 2
+    trees = [Path(t) for t in args.trees]
+    for t in trees:
+        if not t.exists():
+            _err(f"tree path does not exist: {t}")
+            return 2
 
     try:
         patterns = _load_denylist(Path(args.denylist).expanduser())
@@ -123,16 +128,18 @@ def main(argv: list[str]) -> int:
         _err("failing closed — cannot certify the tree clean without a denylist")
         return 2
 
-    hits = scan(tree, patterns)
-    if hits:
-        base = tree.resolve()
-        for f, lineno, token in hits:
+    total = 0
+    for t in trees:
+        base = t.resolve()
+        for f, lineno, token in scan(t, patterns):
             try:
                 rel = f.resolve().relative_to(base)
             except ValueError:
                 rel = f
             print(f"{rel}:{lineno}:{token}")
-        _err(f"{len(hits)} forbidden token(s) found — commit blocked")
+            total += 1
+    if total:
+        _err(f"{total} forbidden token(s) found — commit blocked")
         return 1
     return 0
 
