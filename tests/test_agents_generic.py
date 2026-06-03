@@ -137,3 +137,69 @@ def test_agent_has_no_middle_band_tokens(agent_md: Path):
             f"{token!r}. Genericize: replace stack-specific command examples "
             "with stack-agnostic phrasing (e.g. 'your build/test command')."
         )
+
+
+# ---------------------------------------------------------------------------
+# Slice P3A-2 behavioral tests
+# ---------------------------------------------------------------------------
+
+# Agents that carry a harvest block and must retain lore-hook-compatible heading.
+# Extend this list as new harvest-bearing agents are genericized (P3A-3 adds
+# sdd-assumption-prover and sdd-implementer).
+_HARVEST_BEARING_AGENTS: list[str] = [
+    "architect",
+    "code-reviewer",
+    "security-auditor",
+    "troubleshooter",
+]
+
+# Agents that dispatched brain-librarian and must now carry a visible skip notice
+# so callers know the prior-art synthesis pass was skipped.
+_VISIBLE_SKIP_AGENTS: list[str] = [
+    "architect",
+    "troubleshooter",
+]
+
+
+@pytest.mark.parametrize("stem", _HARVEST_BEARING_AGENTS)
+def test_harvest_bearing_agent_retains_heading(stem: str):
+    """Genericized harvest-bearing agents must keep the literal '## Harvest candidates'
+    heading so lore's harvest hook (path-agnostic, matches heading + entry format)
+    continues to consume their output unchanged.
+    """
+    agent_md = AGENTS_DIR / f"{stem}.md"
+    assert agent_md.exists(), (
+        f"Expected harvest-bearing agent {stem}.md to exist in {AGENTS_DIR}. "
+        "Add the genericized agent before this test can pass."
+    )
+    text = agent_md.read_text()
+    assert "## Harvest candidates" in text, (
+        f"{agent_md.name} is expected to carry a harvest block but is missing the "
+        "literal '## Harvest candidates' heading. Keep the heading and inline the "
+        "entry-format rules (drop the harvest-protocol.md path reference instead)."
+    )
+
+
+@pytest.mark.parametrize("stem", _VISIBLE_SKIP_AGENTS)
+def test_visible_skip_notice_present(stem: str):
+    """Agents that formerly dispatched brain-librarian must carry a visible notice
+    telling the caller when the prior-art synthesis pass was skipped — not a silent
+    prose hedge (council Advocate C1: no-silent-degradation rule).
+
+    The notice must contain 'skipped' and/or 'shallower' so the caller knows
+    results may be incomplete without the knowledge-synthesis subagent.
+    """
+    agent_md = AGENTS_DIR / f"{stem}.md"
+    assert agent_md.exists(), (
+        f"Expected agent {stem}.md to exist in {AGENTS_DIR}. "
+        "Add the genericized agent before this test can pass."
+    )
+    text = agent_md.read_text()
+    has_notice = "skipped" in text or "shallower" in text
+    assert has_notice, (
+        f"{agent_md.name} must contain a visible skip notice (containing 'skipped' "
+        "and/or 'shallower') for when the knowledge-synthesis subagent is absent. "
+        "Rewrite the brain-librarian dispatch to the required fallback shape: "
+        "'if none is configured, note in your report that the prior-art synthesis "
+        "pass was skipped and results may be shallower.'"
+    )
