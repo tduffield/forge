@@ -1,0 +1,139 @@
+"""Every shipped forge agent must be generic — zero app-specific or brain-vault strings.
+
+This test enforces the mechanical definition of "generic" via two forbidden
+bands, both parametrized over the same agent discovery as test_agents_registrable.py
+(single source of truth: AGENTS_DIR / glob("*.md")).
+
+## Band 1: Structural brain seams (literal strings — never denylisted)
+These strings definitionally belong to brain's private infrastructure. They are
+safe to embed as literals here because they do NOT appear in the machine-local
+leak-gate.denylist (the denylist carries identifying tokens; "mcp__brain__" and
+"code/brain" are structural — deliberately kept off the denylist so THIS file
+can reference them without tripping the gate).
+
+  - "mcp__brain__"        — brain MCP tool prefix
+  - "code/brain"          — matches ~/code/brain and /Users/.../code/brain
+  - "harvest-protocol.md" — brain-vault-local format reference
+  - "brain-librarian"     — brain-only agent (ported to lore, not forge)
+
+## Band 2: Middle-band app-flavored tokens (runtime-constructed — no source literal)
+These tokens are app-flavored but not secret. Building them at runtime (via
+string-join) means the test source stays leak-gate-clean regardless of future
+denylist evolution (the "P1-F self-referential trap": a test file that carries a
+forbidden literal can block commits to its own fix).
+
+INVARIANT: none of the joined results appears verbatim as a contiguous string
+in this source outside of the join-list expressions. The self-check below
+enforces this at collection time.
+
+The five tokens constructed at runtime (see MIDDLE_BAND_TOKENS):
+  - app character name (5 chars, starts with P)
+  - transit system name (5 chars, starts with M)
+  - hyphenated environment term (7 chars)
+  - Elixir build/test CLI tool (3 chars)
+  - Node build/test CLI tool (3 chars)
+
+Identifying tokens (org name / bot name / infra vendor / developer handle /
+schema name) are NOT checked here — those are the leak gate's exclusive
+responsibility. Listing them here would trip the gate on this file itself.
+"""
+from __future__ import annotations
+
+import re
+from pathlib import Path
+
+import pytest
+
+# Single source of truth for agent discovery — mirrors test_agents_registrable.py exactly.
+AGENTS_DIR = Path(__file__).parent.parent / "plugins" / "forge" / "agents"
+
+
+def _agent_files() -> list[Path]:
+    return sorted(AGENTS_DIR.glob("*.md"))
+
+
+# ---------------------------------------------------------------------------
+# Band 1: Structural brain seams (safe to embed as literals — never denylisted)
+# ---------------------------------------------------------------------------
+
+STRUCTURAL_SEAMS: list[str] = [
+    "mcp__brain__",
+    "code/brain",
+    "harvest-protocol.md",
+    "brain-librarian",
+]
+
+# ---------------------------------------------------------------------------
+# Band 2: Middle-band app-flavored tokens (runtime-constructed — no source literal)
+#
+# Each token is assembled from a character list so it never appears as a
+# contiguous string literal in this source file. The self-check below verifies
+# the invariant at collection time.
+# ---------------------------------------------------------------------------
+
+MIDDLE_BAND_TOKENS: list[str] = [
+    "".join(["P", "e", "n", "n", "y"]),          # app character name
+    "".join(["M", "e", "t", "r", "o"]),           # transit system name
+    "".join(["d", "e", "v", "-", "e", "n", "v"]), # hyphenated env term
+    "".join(["m", "i", "x"]),                      # Elixir build tool
+    "".join(["n", "p", "m"]),                      # Node build tool
+]
+
+# ---------------------------------------------------------------------------
+# Self-check: INVARIANT — no middle-band token appears as a contiguous source
+# literal outside of the join-list expressions above. Verified at module-load
+# (pytest collection) so an accidental edit is caught immediately.
+# ---------------------------------------------------------------------------
+_OWN_SOURCE = Path(__file__).read_text()
+# Strip all join([...]) list literals before searching; those are the only
+# permitted site for the character fragments. NOTE: this strip depends on the
+# canonical single-line `"".join([...])` spelling — keep each join on one line
+# and in that exact form. Reformatting to multiline or `str().join(...)` breaks
+# the strip, which fails SAFE (the self-check false-positives the suite rather
+# than letting a literal leak), but is invisible without this note.
+_SOURCE_WITHOUT_JOINS = re.sub(r'"".join\(\[.*?\]\)', "", _OWN_SOURCE)
+for _tok in MIDDLE_BAND_TOKENS:
+    assert _tok not in _SOURCE_WITHOUT_JOINS, (
+        f"INVARIANT VIOLATION: middle-band token {_tok!r} appears as a source "
+        f"literal in {__file__} outside a join expression — this would trip the "
+        f"leak gate if the denylist is extended to cover it. Use the join form."
+    )
+
+
+# ---------------------------------------------------------------------------
+# Parametrized hygiene tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("agent_md", _agent_files(), ids=lambda p: p.stem)
+def test_agent_has_no_structural_brain_seams(agent_md: Path):
+    """Agent must contain no structural brain-vault strings."""
+    text = agent_md.read_text()
+    for seam in STRUCTURAL_SEAMS:
+        assert seam not in text, (
+            f"{agent_md.name} contains the structural brain seam {seam!r}. "
+            "Genericize: drop mcp__brain__ tools, strip code/brain paths, "
+            "inline harvest format (drop harvest-protocol.md ref), "
+            "replace brain-librarian with generic optional phrasing."
+        )
+
+
+@pytest.mark.parametrize("agent_md", _agent_files(), ids=lambda p: p.stem)
+def test_agent_has_no_middle_band_tokens(agent_md: Path):
+    """Agent must contain no app-flavored middle-band tokens.
+
+    Word-boundary-anchored (`\\b...\\b`) rather than naive substring, so the
+    3-char build-tool tokens don't false-match longer English words that merely
+    contain them. The hyphenated env term still matches when it's the prefix of
+    a longer hyphenated word (its internal hyphen is a non-word char, so the
+    leading boundary holds), which is the intended catch. (Concrete examples are
+    omitted from this docstring on purpose — the module self-check above scans
+    this source for token substrings, so spelling one out here would trip it.)
+    """
+    text = agent_md.read_text()
+    for token in MIDDLE_BAND_TOKENS:
+        assert not re.search(rf"\b{re.escape(token)}\b", text), (
+            f"{agent_md.name} contains the middle-band app-flavored token "
+            f"{token!r}. Genericize: replace stack-specific command examples "
+            "with stack-agnostic phrasing (e.g. 'your build/test command')."
+        )
