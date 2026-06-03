@@ -11,11 +11,20 @@ codebase they're in.
 
 ## Status
 
-**Skeleton (v0.1.0).** This repo currently ships only a proof-of-life agent
-(`forge-ping`) that confirms plugin agent registration works. The 13 general
-dev agents (`researcher`, `troubleshooter`, `code-reviewer`, `architect`,
-`planner`, the `sdd-*` quartet, `doc-finder`, `test-runner`, `log-sifter`,
-`pr-summarizer`, `code-simplifier`, …) are migrated here in a later phase.
+**Agent fleet populated (v0.1.0).** The 11 general dev agents are present and
+genericized — they carry zero app-specific or vault-specific strings and
+register as `forge:<name>`:
+
+- `architect`, `researcher`, `troubleshooter`
+- `code-reviewer`, `security-auditor`
+- `doc-finder`, `test-runner`, `log-sifter`, `pr-summarizer`
+- `sdd-assumption-prover`, `sdd-implementer`
+
+A proof-of-life agent (`forge-ping`) also ships to confirm plugin agent
+registration works. Two agents are intentionally **not** here: `planner` moves
+in a later phase alongside the `/planning` skill, and `design-mockup-writer`
+is bound to a specific app's visual aesthetic and lives in that app's own repo.
+`code-simplifier` is a separate plugin and was never part of this fleet.
 Nothing app-specific belongs in forge; per-project automation stays in that
 project's own repo.
 

@@ -145,12 +145,15 @@ def test_agent_has_no_middle_band_tokens(agent_md: Path):
 
 # Agents that carry a harvest block and must retain lore-hook-compatible heading.
 # Extend this list as new harvest-bearing agents are genericized (P3A-3 adds
-# sdd-assumption-prover and sdd-implementer).
+# researcher, sdd-assumption-prover, and sdd-implementer).
 _HARVEST_BEARING_AGENTS: list[str] = [
     "architect",
     "code-reviewer",
     "security-auditor",
     "troubleshooter",
+    "researcher",
+    "sdd-assumption-prover",
+    "sdd-implementer",
 ]
 
 # Agents that dispatched brain-librarian and must now carry a visible skip notice
@@ -158,6 +161,7 @@ _HARVEST_BEARING_AGENTS: list[str] = [
 _VISIBLE_SKIP_AGENTS: list[str] = [
     "architect",
     "troubleshooter",
+    "researcher",
 ]
 
 
@@ -186,8 +190,11 @@ def test_visible_skip_notice_present(stem: str):
     telling the caller when the prior-art synthesis pass was skipped — not a silent
     prose hedge (council Advocate C1: no-silent-degradation rule).
 
-    The notice must contain 'skipped' and/or 'shallower' so the caller knows
-    results may be incomplete without the knowledge-synthesis subagent.
+    The notice must contain the distinctive phrase fragment 'synthesis pass was
+    skipped' so the caller knows results may be incomplete without the
+    knowledge-synthesis subagent. (Matching the full fragment rather than a bare
+    word like 'skipped'/'shallower' avoids false-passing on unrelated prose that
+    merely happens to use one of those words — code-reviewer Minor from P3A-2.)
     """
     agent_md = AGENTS_DIR / f"{stem}.md"
     assert agent_md.exists(), (
@@ -195,10 +202,9 @@ def test_visible_skip_notice_present(stem: str):
         "Add the genericized agent before this test can pass."
     )
     text = agent_md.read_text()
-    has_notice = "skipped" in text or "shallower" in text
-    assert has_notice, (
-        f"{agent_md.name} must contain a visible skip notice (containing 'skipped' "
-        "and/or 'shallower') for when the knowledge-synthesis subagent is absent. "
+    assert "synthesis pass was skipped" in text, (
+        f"{agent_md.name} must contain the visible skip-notice phrase 'synthesis "
+        "pass was skipped' for when the knowledge-synthesis subagent is absent. "
         "Rewrite the brain-librarian dispatch to the required fallback shape: "
         "'if none is configured, note in your report that the prior-art synthesis "
         "pass was skipped and results may be shallower.'"
