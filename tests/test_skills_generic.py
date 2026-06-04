@@ -170,3 +170,52 @@ def test_skill_visible_skip_phrases_present(stem: str):
             f"{stem}/SKILL.md is missing the visible-skip phrase {phrase!r}. "
             "A stripped seam must announce itself, not silently disappear."
         )
+
+
+# ---------------------------------------------------------------------------
+# Generalize-replacement assertions: a genericize (not a degrade) must land
+# the provider-agnostic replacement, not just drop the original. A
+# tokens-absent-only test would pass a skill that simply deleted the example
+# without replacing it — exactly the silent omission the spec forbids.
+# Each entry: skill stem -> list of (absent_marker, present_phrase) pairs.
+#   absent_marker  — the private literal that must NOT appear (Band-1 catches
+#                    "code/brain" already; this is an extra named check for
+#                    clarity in error messages).
+#   present_phrase — a distinctive contiguous substring that MUST appear,
+#                    confirming the generic replacement actually landed.
+# ---------------------------------------------------------------------------
+
+_GENERALIZE_REPLACEMENTS: dict[str, list[tuple[str, str]]] = {
+    "requesting-code-review": [
+        (
+            "brain/plans/",
+            "the plan/requirements the caller provides",
+        ),
+    ],
+}
+
+
+@pytest.mark.parametrize("stem", sorted(_GENERALIZE_REPLACEMENTS))
+def test_skill_generalize_replacement_landed(stem: str):
+    """A genericized seam (generalize flavor) must have its replacement present.
+
+    Checks that the private path/token is gone AND the provider-agnostic
+    replacement phrase is present. Both halves must hold — absence of the
+    private token does not prove the replacement arrived.
+    """
+    skill_md = SKILLS_DIR / stem / "SKILL.md"
+    assert skill_md.exists(), (
+        f"Expected skill {stem}/SKILL.md to exist in {SKILLS_DIR}. "
+        "Add the genericized skill before this test can pass."
+    )
+    text = skill_md.read_text()
+    for absent_marker, present_phrase in _GENERALIZE_REPLACEMENTS[stem]:
+        assert absent_marker not in text, (
+            f"{stem}/SKILL.md still contains the private path/token "
+            f"{absent_marker!r}. Strip it and replace with the generic phrasing."
+        )
+        assert present_phrase in text, (
+            f"{stem}/SKILL.md is missing the generic replacement phrase "
+            f"{present_phrase!r}. A silent omission of the private token is "
+            "not enough — the replacement must explicitly land."
+        )
