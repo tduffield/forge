@@ -47,3 +47,37 @@ def test_agent_has_registrable_frontmatter(agent_md: Path):
         f"{agent_md.name} frontmatter must carry a non-empty `description:` "
         "(it's what drives agent dispatch)"
     )
+
+
+def _frontmatter(agent_md: Path) -> str:
+    text = agent_md.read_text()
+    end = text.find("\n---", 3)
+    return text[3:end]
+
+
+def _tools_line(frontmatter: str) -> str | None:
+    for ln in frontmatter.splitlines():
+        if ln.strip().startswith("tools:"):
+            return ln.split(":", 1)[1].strip()
+    return None
+
+
+def test_planner_tools_line_is_generic():
+    """The planner agent dropped its `mcp__brain__*` tools during genericization.
+    Its `tools:` line must be exactly the generic resolvable list — `Write` is
+    required so the agent can still emit specs/plans — and must carry NO
+    `mcp__brain__*` residue (council Builder Important)."""
+    planner_md = AGENTS_DIR / "planner.md"
+    assert planner_md.exists(), f"Expected planner.md in {AGENTS_DIR}"
+    tools = _tools_line(_frontmatter(planner_md))
+    assert tools is not None, "planner.md frontmatter must carry a `tools:` line"
+    assert "mcp__brain__" not in tools, (
+        f"planner.md `tools:` still references a brain MCP tool: {tools!r}. "
+        "Replace the entire tools line with the generic list."
+    )
+    declared = [t.strip() for t in tools.split(",") if t.strip()]
+    assert declared == ["Read", "Grep", "Glob", "Write", "WebFetch", "WebSearch", "Bash"], (
+        f"planner.md `tools:` must be exactly the generic list "
+        "'Read, Grep, Glob, Write, WebFetch, WebSearch, Bash' "
+        f"(Write required to emit specs/plans), got {tools!r}"
+    )

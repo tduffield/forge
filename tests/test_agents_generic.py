@@ -164,6 +164,7 @@ _VISIBLE_SKIP_AGENTS: list[str] = [
     "architect",
     "troubleshooter",
     "researcher",
+    "planner",
     "council-builder",
     "council-reliability",
     "council-security",
@@ -187,6 +188,74 @@ def test_harvest_bearing_agent_retains_heading(stem: str):
         f"{agent_md.name} is expected to carry a harvest block but is missing the "
         "literal '## Harvest candidates' heading. Keep the heading and inline the "
         "entry-format rules (drop the harvest-protocol.md path reference instead)."
+    )
+
+
+# ---------------------------------------------------------------------------
+# Slice P3C2-4 (planner) — observability-seam Band-2 tokens + visible-skip
+#
+# The planner agent carried an app-specific "Health & Soak" block whose tokens
+# are NOT in the shared MIDDLE_BAND_TOKENS list (those cover the stack/repo
+# flavor). These are the planner's specific observability seams; name them so a
+# partial strip of the Health & Soak block can't survive (council Security
+# Critical). Runtime-constructed, same join-form invariant as MIDDLE_BAND_TOKENS
+# (the module self-check above scans this whole source).
+# ---------------------------------------------------------------------------
+
+_PLANNER_OBSERVABILITY_TOKENS: list[str] = [
+    "".join(["p", "l", "a", "t", "f", "o", "r", "m", "."]),  # dotted metric namespace prefix
+    "".join(["e", "v", "i", "d", "e", "n", "c", "e", "_", "p", "a", "c", "k"]),  # soak evidence-pack script
+    "".join(["p", "l", "a", "t", "f", "o", "r", "m", "-", "h", "e", "a", "l", "t", "h", "-", "c", "h", "e", "c", "k", "s"]),  # subsystem profile slug
+    "".join(["d", "a", "s", "h", "0"]),  # observability vendor
+]
+
+# Re-run the join-form invariant for the planner token list (the self-check
+# loop above only covered MIDDLE_BAND_TOKENS).
+for _tok in _PLANNER_OBSERVABILITY_TOKENS:
+    assert _tok not in _SOURCE_WITHOUT_JOINS, (
+        f"INVARIANT VIOLATION: planner observability token {_tok!r} appears as a "
+        f"source literal in {__file__} outside a join expression — use the join form."
+    )
+
+
+# The exact observability visible-skip phrase the planner emits. Asserted PRESENT
+# as a distinctive contiguous substring so a silent omission of the degrade
+# notice fails (council Reliability — visible-skip present-assertion). Mirrors
+# the planning skill's observability degrade wording.
+_PLANNER_OBSERVABILITY_VISIBLE_SKIP = "no observability provider configured — see the extend guide"
+
+
+def test_planner_has_no_observability_seam_tokens():
+    """The planner's old Health & Soak block carried the observability-vendor,
+    evidence-pack, dotted-metric-prefix, and health-check-subsystem tokens. After
+    the observability degrade none may survive — a partial strip must fail here."""
+    planner_md = AGENTS_DIR / "planner.md"
+    assert planner_md.exists(), (
+        f"Expected planner.md in {AGENTS_DIR}. Add the genericized agent first."
+    )
+    text = planner_md.read_text()
+    for token in _PLANNER_OBSERVABILITY_TOKENS:
+        assert token not in text, (
+            f"planner.md still contains the observability seam token {token!r}. "
+            "Strip the app-specific Health & Soak block: replace with the generic "
+            "'Observability & Failure Visibility' mapping + observability "
+            "extension point + visible-skip notice."
+        )
+
+
+def test_planner_observability_visible_skip_present():
+    """The planner must carry the observability visible-skip phrase as a
+    distinctive contiguous substring so the degrade announces itself rather than
+    silently omitting the soak-signal step (degrade present-assertion)."""
+    planner_md = AGENTS_DIR / "planner.md"
+    assert planner_md.exists(), (
+        f"Expected planner.md in {AGENTS_DIR}. Add the genericized agent first."
+    )
+    text = planner_md.read_text()
+    assert _PLANNER_OBSERVABILITY_VISIBLE_SKIP in text, (
+        f"planner.md must contain the observability visible-skip phrase "
+        f"{_PLANNER_OBSERVABILITY_VISIBLE_SKIP!r} so the degrade is visible to the "
+        "caller when no observability provider is configured."
     )
 
 
