@@ -186,6 +186,16 @@ def test_skill_visible_skip_phrases_present(stem: str):
 # ---------------------------------------------------------------------------
 
 _GENERALIZE_REPLACEMENTS: dict[str, list[tuple[str, str]]] = {
+    "followup": [
+        (
+            "brain/plans/",
+            "lore new plan",
+        ),
+        (
+            "aggregated by the cost reporter",
+            "lore new plan",
+        ),
+    ],
     "requesting-code-review": [
         (
             "brain/plans/",
