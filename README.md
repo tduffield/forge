@@ -9,6 +9,14 @@ management). Where lore owns *what you know*, forge owns *how you build*:
 the reusable agents and rituals a developer reaches for regardless of which
 codebase they're in.
 
+**Extending forge for your project?** Forge's planning, code-review, and
+subagent-dev skills carry named extension points (feature flags, issue tracker,
+observability, test commands). The full adopter guide lives in lore's
+`docs/EXTENDING.md` — that is the entry-point for wiring the extension points
+to your own stack. The `plugins/forge/docs/DEGRADATION.md` in this repo is the
+canonical reference for each extension point's visible-skip behavior and re-add
+path.
+
 ## Status
 
 **Agent fleet populated (v0.2.0).** The 15 general dev agents are present and

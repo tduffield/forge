@@ -23,6 +23,26 @@ silently omitting a step.
 | `feature_flags` — Feature flag provider (subagent-driven-development, Pre-Loop) | The both-states (on/off) test-coverage discipline still applies when the plan declares a flag, but provider SDK detection, flag creation, and first-touch wire-up are skipped | "no feature-flag provider configured — flag setup skipped" printed at the Pre-Loop flag-setup step | Configure a flag provider; add a flag-configuration skill to your plugin and dispatch it at the Pre-Loop step |
 | `issue_tracker` — Issue tracker / project management (subagent-driven-development, loop entry + after-all-slices) | Slices are dispatched and verified normally; the work item's status is never advanced (no "in progress" / "complete" transition) | "no issue tracker configured — status transitions skipped" printed at the loop-entry and after-all-slices status steps | Configure an issue tracker; add a tracker-sync skill to your plugin and hook it into the loop-entry and after-all-slices steps |
 
+## Lighter-weight seams
+
+These extension points are tagged in the shipped skills and agents but do not
+produce a degradation banner, because the "default" behavior is simply the
+generic path with no provider assumed:
+
+| Extension point | Where it is tagged | Behavior without configuration | How you fill it |
+|---|---|---|---|
+| `build_test_commands` — the build/test/lint command the `test-runner` agent runs | `test-runner` agent frontmatter | The agent is stack-agnostic by design — it runs whatever command the caller supplies per invocation. There is no default command and no visible-skip banner; the caller always provides the command. | Pass your project's test runner, lint tool, or CI script as the command when you dispatch `test-runner`, or write a thin app skill that always supplies your stack's commands. |
+
+## Cross-plugin seams (lore-side)
+
+The following extension point is tagged in **lore**'s skills, not forge's. It
+is listed here so the full set of extension points is discoverable from one
+place, but the canonical reference and re-add path live in **lore**:
+
+| Extension point | Owned by | Reference |
+|---|---|---|
+| `design_mockup` — UI mockup generation in the `brainstorm` skill | lore (`plugins/lore/skills/brainstorm`) | See lore's `plugins/lore/docs/DEGRADATION.md` for the visible-skip phrase and re-add path. |
+
 ## Removed, not degraded
 
 Some capabilities present in the upstream private skill were **removed entirely** during
