@@ -115,6 +115,15 @@ def test_skill_has_no_app_seam_tokens(skill_md: Path):
     occurrence, including when they appear as the prefix of a longer dotted
     metric name or a hyphenated/underscored compound. The genericized skills
     replace these with provider-agnostic phrasing + a visible-skip notice.
+
+    Footgun note: substring matching makes the short build-tool and
+    issue-tracker tokens intentionally broad — a future skill whose innocent
+    prose happens to contain one as a substring will trip this. That asymmetry
+    is deliberate: a false positive fails loud and cheap (rephrase one word), a
+    false negative leaks a private token. If an innocent word ever trips it,
+    special-case THAT word — do not weaken the token to word-boundary.
+    (Avoid spelling the tokens themselves in this docstring — the module
+    self-check below scans this file's own source.)
     """
     text = skill_md.read_text().lower()
     for token in APP_SEAM_TOKENS:
