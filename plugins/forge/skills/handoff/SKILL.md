@@ -63,11 +63,13 @@ Write the composed `## Pickup hints` body to a temp file, then hand off atomical
 ```bash
 HINTS_TMP=$(mktemp /tmp/forge-handoff-hints.XXXXXX)
 printf '%s\n' "$HINTS" > "$HINTS_TMP"
-lore handoff --pickup-hints-file "$HINTS_TMP"
+lore handoff --worktree "<slug>" --pickup-hints-file "$HINTS_TMP"
 rm -f "$HINTS_TMP"
 ```
 
-`lore handoff --pickup-hints-file` writes the hints under `## Pickup hints` AND shelves the note in one atomic operation — hints and shelving happen in a single call.
+`<slug>` is the worktree slug for this session (e.g. `alpha-widget`). **Always pass `--worktree <slug>` explicitly.** Without it, `lore handoff` falls back to git-toplevel basename for worktree detection, which resolves the wrong session note and silently exits 0 without shelving.
+
+`lore handoff --worktree <slug> --pickup-hints-file` writes the hints under `## Pickup hints` AND shelves the note in one atomic operation — hints and shelving happen in a single call.
 
 After `lore handoff` returns:
 

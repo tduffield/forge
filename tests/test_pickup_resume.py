@@ -196,7 +196,7 @@ def test_real_pickup_sequence_shelved_then_resume(fixture_vault: Path, tmp_path:
     # --- handoff shelves the note with hints ---
     hints_file = tmp_path / "pickup_hints.md"
     hints_file.write_text("Next: resume widget implementation\nBlocker: dependency upgrade\n")
-    shelve = _run_lore(cli, ["handoff", "--pickup-hints-file", str(hints_file)], fixture_vault, cwd)
+    shelve = _run_lore(cli, ["handoff", "--worktree", "alpha-widget", "--pickup-hints-file", str(hints_file)], fixture_vault, cwd)
     assert shelve.returncode == 0, shelve.stderr
     assert "status: shelved" in note.read_text()
 
@@ -224,7 +224,7 @@ def test_real_pickup_resume_by_path(fixture_vault: Path, tmp_path: Path):
 
     hints_file = tmp_path / "h.md"
     hints_file.write_text("Next: thing\n")
-    _run_lore(cli, ["handoff", "--pickup-hints-file", str(hints_file)], fixture_vault, cwd)
+    _run_lore(cli, ["handoff", "--worktree", "alpha-widget", "--pickup-hints-file", str(hints_file)], fixture_vault, cwd)
     assert "status: shelved" in note.read_text()
 
     resumed = _run_lore(cli, ["resume", str(note)], fixture_vault, cwd)

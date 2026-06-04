@@ -73,6 +73,8 @@ lore resume "<slug-or-note-path>"
 
 `lore resume` accepts the worktree slug or an explicit note path; it prints a confirmation, or a clear "not shelved" notice if the note is already active/complete.
 
+**Always pass an explicit slug or note path.** If you omit the target, `lore resume` auto-detects the worktree via git-toplevel basename, which may resolve the wrong session note. Pass the worktree slug directly (e.g. `lore resume "alpha-widget"`) or the full note path returned by `lore shelved`.
+
 ### Degraded backend (no lore)
 
 There is no status to flip — the forge handoff file is a plain artifact. The hints are surfaced; the file stays in place for re-reading.
