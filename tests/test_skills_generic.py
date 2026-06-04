@@ -66,6 +66,7 @@ APP_SEAM_TOKENS: list[str] = [
     "".join(["a", "s", "a", "n", "a"]),                                                        # issue tracker vendor
     "".join(["m", "i", "x"]),                                                                   # build/test CLI
     "".join(["n", "p", "m"]),                                                                   # build/test CLI
+    "".join(["z", "e", "n", "i", "t", "h", "/", ".", "c", "l", "a", "u", "d", "e"]),           # host-config cross-ref path (denylisted org name → runtime-built)
 ]
 
 # ---------------------------------------------------------------------------
@@ -148,6 +149,10 @@ _VISIBLE_SKIP_PHRASES: dict[str, list[str]] = {
         "no observability provider configured",
         "no issue tracker configured",
     ],
+    "subagent-driven-development": [
+        "no feature-flag provider configured — flag setup skipped",
+        "no issue tracker configured — status transitions skipped",
+    ],
 }
 
 
@@ -228,4 +233,45 @@ def test_skill_generalize_replacement_landed(stem: str):
             f"{stem}/SKILL.md is missing the generic replacement phrase "
             f"{present_phrase!r}. A silent omission of the private token is "
             "not enough — the replacement must explicitly land."
+        )
+
+
+# ---------------------------------------------------------------------------
+# Inlined-value assertions: when a generic table/value is RELOCATED inline from
+# an external doc (rather than degraded or path-genericized), a tokens-absent
+# scan can't tell a faithful copy from a copy-paste corruption. The
+# subagent-driven-development review-threshold table was relocated inline from
+# the host project's CLAUDE.md — guard its boundary values so a future edit
+# that scrambles them fails loud (council Reliability Minor).
+#
+# skill stem -> list of substrings that MUST be present verbatim
+# ---------------------------------------------------------------------------
+
+_INLINED_VALUES: dict[str, list[str]] = {
+    "subagent-driven-development": [
+        "30",   # Small/Medium line boundary (≤30 lines)
+        "200",  # Medium/Large line boundary (30-200 lines)
+        "5+",   # Large file-count threshold (5+ files)
+    ],
+}
+
+
+@pytest.mark.parametrize("stem", sorted(_INLINED_VALUES))
+def test_skill_inlined_values_present(stem: str):
+    """A relocated-inline table must retain its boundary values verbatim.
+
+    Guards against a copy-paste corruption of the review-threshold boundaries
+    (Small ≤30 / Medium 30-200 / Large 200+ or 5+ files) that no
+    tokens-absent or visible-skip check would catch.
+    """
+    skill_md = SKILLS_DIR / stem / "SKILL.md"
+    assert skill_md.exists(), (
+        f"Expected skill {stem}/SKILL.md to exist in {SKILLS_DIR}. "
+        "Add the genericized skill before this test can pass."
+    )
+    text = skill_md.read_text()
+    for value in _INLINED_VALUES[stem]:
+        assert value in text, (
+            f"{stem}/SKILL.md is missing the inlined boundary value {value!r}. "
+            "The relocated review-threshold table must keep its values intact."
         )
