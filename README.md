@@ -28,10 +28,10 @@ Reliability=tests/failure modes, Security=threat model, Advocate=UX) and
 returns a focused single-lens response rather than a synthesis. If you need
 general architecture advice outside a planning context, use `architect` instead.
 
-**First skills shipped.** `/forge:handoff` is the first dev-ritual skill, paired
-with a registered `/forge:pickup` (see *What lives here* below). They stood up
-forge's skill test harness (`tests/test_skills_registrable.py` +
-`tests/test_skills_generic.py`).
+**First skills shipped.** `/forge:handoff` and `/forge:pickup` are the first
+dev-ritual skills — a symmetric shelve/resume pair (see *What lives here*
+below). They stood up forge's skill test harness
+(`tests/test_skills_registrable.py` + `tests/test_skills_generic.py`).
 
 A proof-of-life agent (`forge-ping`) also ships to confirm plugin agent
 registration works. Two agents are intentionally **not** here: `planner` moves
