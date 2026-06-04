@@ -242,7 +242,7 @@ def test_real_lore_handoff_with_pickup_hints_file(fixture_vault: Path, tmp_path:
     env["LORE_VAULT"] = str(fixture_vault)
 
     proc = subprocess.run(
-        [*cli, "handoff", "--pickup-hints-file", str(hints_file)],
+        [*cli, "handoff", "--worktree", "alpha-widget", "--pickup-hints-file", str(hints_file)],
         cwd=str(cwd),
         env=env,
         capture_output=True,
