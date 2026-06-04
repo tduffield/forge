@@ -1,9 +1,10 @@
-"""Every shipped forge skill must be generic — zero brain-vault structural strings.
+"""Every shipped forge skill must be generic — zero brain-vault structural
+strings and zero app-flavored seam tokens.
 
-This test enforces the mechanical definition of "generic" via structural brain
-seams, parametrized over skills discovered in plugins/forge/skills/*/SKILL.md.
+This test enforces the mechanical definition of "generic" via two forbidden
+bands, parametrized over skills discovered in plugins/forge/skills/*/SKILL.md.
 
-## Structural brain seams (literal strings — never denylisted)
+## Band 1: Structural brain seams (literal strings — never denylisted)
 These strings definitionally belong to brain's private infrastructure. They are
 safe to embed as literals here because they do NOT appear in the machine-local
 leak-gate.denylist (the denylist carries identifying tokens; "mcp__brain__" and
@@ -13,24 +14,75 @@ can reference them without tripping the gate).
   - "mcp__brain__"  — brain MCP tool prefix
   - "code/brain"    — matches ~/code/brain and /Users/.../code/brain
 
+## Band 2: App-flavored seam tokens (runtime-constructed — no source literal)
+These tokens name the app-specific seams that the genericized skills strip
+(observability vendor, flag-provider skill, schema name, build/test CLIs, issue
+tracker, cost-history report). Building each at runtime (via string-join) keeps
+this test source leak-gate-clean regardless of future denylist evolution — the
+"P1-F self-referential trap": a test file carrying a forbidden literal can block
+commits to its own fix. The module self-check below enforces that none of the
+joined results appears verbatim as a contiguous source literal here.
+
 Identifying tokens (developer handle / org name / machine path) are NOT checked
 here — those are the leak gate's exclusive responsibility. Adding them here as
-literals would trip the gate on this file itself (the P1-F self-referential trap).
+literals would trip the gate on this file itself.
 
 `skills/_shared/` is a reference doc, not a skill, and is exempt.
 """
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import pytest
 
 SKILLS_DIR = Path(__file__).parent.parent / "plugins" / "forge" / "skills"
 
+# ---------------------------------------------------------------------------
+# Band 1: Structural brain seams (safe to embed as literals — never denylisted)
+# ---------------------------------------------------------------------------
+
 STRUCTURAL_SEAMS: list[str] = [
     "mcp__brain__",
     "code/brain",
 ]
+
+# ---------------------------------------------------------------------------
+# Band 2: App-flavored seam tokens (runtime-constructed — no source literal)
+#
+# Each token is assembled from a character list so it never appears as a
+# contiguous string literal in this source file. The self-check below verifies
+# the invariant at collection time.
+# ---------------------------------------------------------------------------
+
+APP_SEAM_TOKENS: list[str] = [
+    "".join(["p", "o", "s", "t", "h", "o", "g"]),                                              # analytics/flag vendor
+    "".join(["i", "n", "s", "t", "r", "u", "m", "e", "n", "t", "-", "f", "e", "a", "t", "u", "r", "e", "-", "f", "l", "a", "g", "s"]),  # flag-provider skill slug
+    "".join(["d", "a", "s", "h", "0"]),                                                        # observability vendor
+    "".join(["e", "v", "i", "d", "e", "n", "c", "e", "_", "p", "a", "c", "k"]),                # soak evidence allowlist script
+    "".join(["p", "l", "a", "n", "-", "c", "o", "s", "t", "-", "h", "i", "s", "t", "o", "r", "y"]),  # cost-history report (Cluster B)
+    "".join(["p", "r", "o", "j", "e", "c", "t", "i", "o", "n", "s"]),                          # private DB schema name
+    "".join(["p", "l", "a", "t", "f", "o", "r", "m", "."]),                                    # dotted metric namespace prefix
+    "".join(["a", "s", "a", "n", "a"]),                                                        # issue tracker vendor
+    "".join(["m", "i", "x"]),                                                                   # build/test CLI
+    "".join(["n", "p", "m"]),                                                                   # build/test CLI
+]
+
+# ---------------------------------------------------------------------------
+# Self-check: INVARIANT — no app-seam token appears as a contiguous source
+# literal outside of the join-list expressions above. Verified at module-load
+# (pytest collection) so an accidental edit is caught immediately. Mirrors the
+# self-check in test_agents_generic.py — keep each join on one canonical
+# single-line `"".join([...])` so the strip regex finds it.
+# ---------------------------------------------------------------------------
+_OWN_SOURCE = Path(__file__).read_text()
+_SOURCE_WITHOUT_JOINS = re.sub(r'"".join\(\[.*?\]\)', "", _OWN_SOURCE)
+for _tok in APP_SEAM_TOKENS:
+    assert _tok not in _SOURCE_WITHOUT_JOINS, (
+        f"INVARIANT VIOLATION: app-seam token {_tok!r} appears as a source "
+        f"literal in {__file__} outside a join expression — this would trip the "
+        f"leak gate if the denylist is extended to cover it. Use the join form."
+    )
 
 
 def _skill_files() -> list[Path]:
@@ -51,4 +103,61 @@ def test_skill_has_no_structural_brain_seams(skill_md: Path):
         assert seam not in text, (
             f"{skill_md.parent.name}/SKILL.md contains the structural brain seam "
             f"{seam!r}. Genericize: drop mcp__brain__ tools, strip code/brain paths."
+        )
+
+
+@pytest.mark.parametrize("skill_md", _skill_files(), ids=lambda p: p.parent.name)
+def test_skill_has_no_app_seam_tokens(skill_md: Path):
+    """Skill must contain no app-flavored seam tokens.
+
+    Case-insensitive substring match (not word-boundary): some tokens — the
+    dotted metric prefix and the issue-tracker vendor — are meant to catch any
+    occurrence, including when they appear as the prefix of a longer dotted
+    metric name or a hyphenated/underscored compound. The genericized skills
+    replace these with provider-agnostic phrasing + a visible-skip notice.
+    """
+    text = skill_md.read_text().lower()
+    for token in APP_SEAM_TOKENS:
+        assert token.lower() not in text, (
+            f"{skill_md.parent.name}/SKILL.md contains the app-flavored seam token "
+            f"{token!r}. Genericize: replace vendor/stack-specific names with "
+            "provider-agnostic phrasing and a visible-skip notice."
+        )
+
+
+# ---------------------------------------------------------------------------
+# Visible-skip assertions: a stripped seam must announce itself, never silently
+# vanish. A tokens-absent-only test would pass a skill that simply deleted the
+# step — the exact silent-degradation the spec forbids. Each strip → a paired
+# present-assertion on a distinctive CONTIGUOUS notice substring.
+# ---------------------------------------------------------------------------
+
+# skill stem -> list of contiguous visible-skip phrases that MUST be present
+_VISIBLE_SKIP_PHRASES: dict[str, list[str]] = {
+    "planning": [
+        "no feature-flag provider configured",
+        "no observability provider configured",
+        "no issue tracker configured",
+    ],
+}
+
+
+@pytest.mark.parametrize("stem", sorted(_VISIBLE_SKIP_PHRASES))
+def test_skill_visible_skip_phrases_present(stem: str):
+    """A genericized skill that strips a seam must print a visible-skip notice.
+
+    Asserts each distinctive contiguous phrase appears verbatim — a silently
+    dropped step (no notice) fails here even though it would pass a
+    tokens-absent-only scan.
+    """
+    skill_md = SKILLS_DIR / stem / "SKILL.md"
+    assert skill_md.exists(), (
+        f"Expected skill {stem}/SKILL.md to exist in {SKILLS_DIR}. "
+        "Add the genericized skill before this test can pass."
+    )
+    text = skill_md.read_text()
+    for phrase in _VISIBLE_SKIP_PHRASES[stem]:
+        assert phrase in text, (
+            f"{stem}/SKILL.md is missing the visible-skip phrase {phrase!r}. "
+            "A stripped seam must announce itself, not silently disappear."
         )
