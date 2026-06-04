@@ -28,6 +28,11 @@ Reliability=tests/failure modes, Security=threat model, Advocate=UX) and
 returns a focused single-lens response rather than a synthesis. If you need
 general architecture advice outside a planning context, use `architect` instead.
 
+**First skills shipped.** `/forge:handoff` is the first dev-ritual skill, paired
+with a registered `/forge:pickup` (see *What lives here* below). They stood up
+forge's skill test harness (`tests/test_skills_registrable.py` +
+`tests/test_skills_generic.py`).
+
 A proof-of-life agent (`forge-ping`) also ships to confirm plugin agent
 registration works. Two agents are intentionally **not** here: `planner` moves
 in a later phase alongside the `/planning` skill, and `design-mockup-writer`
@@ -40,8 +45,20 @@ project's own repo.
 
 - **Agents** (`plugins/forge/agents/`) — general dev subagents, dispatchable as
   `forge:<name>` once installed.
-- **Skills** (`plugins/forge/skills/`) — dev-ritual skills (TDD loops, review
-  cadences, …), invocable as `/forge:<name>`. *(none yet — populated later.)*
+- **Skills** (`plugins/forge/skills/`) — dev-ritual skills, invocable as
+  `/forge:<name>`:
+  - `handoff` — record read-only git state + shelve a session note with pickup
+    hints so a future session can resume.
+  - `pickup` — resume a shelved work chain (surface recorded git state + hints).
+
+  **lore-optional coupling:** the handoff/pickup pair drives the [lore](../lore)
+  CLI (`lore handoff` / the session-note finder) when it's available, and
+  degrades to a local forge handoff file at `~/.forge/handoffs/<slug>.md` — out
+  of any repo — when lore is absent, `$LORE_VAULT` is unset, or `lore stats`
+  fails. This is the same one-directional optional dependency forge already has
+  on lore (forge → lore is allowed; lore never depends on forge). The git
+  capture is strictly **read-only** — these rituals record state, they do not
+  commit, push, or rebase your code.
 
 ## Layout
 
@@ -111,6 +128,10 @@ baked into the generated hook stay machine-local.
 python3 -m pytest -q
 ```
 
-Covers manifest validity (`marketplace.json` / `plugin.json`) and agent
-frontmatter registrability. The plugin-system boundary (actual install +
-dispatch) is covered by `MANUAL-SMOKE.md`, which unit tests can't reach.
+Covers manifest validity (`marketplace.json` / `plugin.json`), agent + skill
+frontmatter registrability, structural genericity (no brain-vault seams), and
+the deterministic handoff-capture helper (git-state survey, lore 3-state
+detection, degraded-file write) including a real cross-repo integration test
+that drives the actual `lore handoff` against a synthetic fixture vault. The
+plugin-system boundary (actual install + dispatch) is covered by
+`MANUAL-SMOKE.md`, which unit tests can't reach.
